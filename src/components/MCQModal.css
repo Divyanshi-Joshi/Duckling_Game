@@ -1,0 +1,41 @@
+/* src/components/MCQModal.css */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it appears above other elements */
+  }
+  
+  .modal-content {
+    background-color: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+  }
+  
+  .options {
+    margin-top: 20px;
+  }
+  
+  .options button {
+    margin: 5px;
+    padding: 10px 15px;
+    border: none;
+    background-color: #1E90FF;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .options button:hover {
+    background-color: #0d6efd;
+  }
