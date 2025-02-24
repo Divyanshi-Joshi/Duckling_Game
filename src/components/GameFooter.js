@@ -1,11 +1,12 @@
 // src/components/GameFooter.js
+
 import React from 'react';
 
-const GameFooter = ({ onStart }) => {
+const GameFooter = ({ onReset }) => {
   return (
     <footer style={footerStyle}>
-      <button onClick={onStart} style={buttonStyle}>
-        Start Game
+      <button onClick={onReset} style={buttonStyle}>
+        Reset Game
       </button>
     </footer>
   );
@@ -18,9 +19,15 @@ const footerStyle = {
 };
 
 const buttonStyle = {
-  padding: '10px 20px',
-  fontSize: '16px',
+  padding: '15px 30px',
+  fontSize: '18px',
+  fontWeight: 'bold',
+  color: 'white',
+  backgroundColor: '#FF5733',
+  border: 'none',
+  borderRadius: '10px',
   cursor: 'pointer',
+  transition: 'background-color 0.3s, transform 0.2s',
 };
 
 export default GameFooter;
