@@ -1,0 +1,190 @@
+/* src/components/GameHeader.css */
+
+.game-header {
+  padding: 10px 20px;
+  background-color: #87CEEB;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.stat-container {
+  display: flex;
+  align-items: center;
+}
+
+.stat-label {
+  font-weight: bold;
+  margin-right: 5px;
+  font-size: 1.1em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.stat-value {
+  font-size: 1.1em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.lives-container .heart-icon {
+  color: #FF0000;
+  font-size: 1.2em;
+  margin-right: 5px;
+  animation: pulse 1.5s infinite;
+  transition: transform 0.2s;
+}
+
+.lives-container .heart-icon:last-child {
+  margin-right: 0;
+}
+
+.heart-icon:hover {
+  transform: scale(1.2);
+}
+
+.coin-icon {
+  color: #FFD700;
+  font-size: 1.2em;
+  margin-left: 5px;
+  animation: pulse 1.5s infinite;
+  transition: transform 0.2s;
+}
+
+.coin-icon:hover {
+  transform: scale(1.2);
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 2em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.header-right .sun-image {
+  width: 100px;
+  height: 100px;
+}
+
+/* Button Styling */
+.world-buttons {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.world-button {
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  background-color: #4CAF50;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.world-button:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+.world-button:active {
+  background-color: #3d8b40;
+  transform: scale(0.95);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .header-left {
+    gap: 15px;
+  }
+
+  .stat-container,
+  .collection-container {
+    padding: 6px 12px;
+  }
+
+  .stat-label,
+  .stat-value {
+    font-size: 1em;
+  }
+
+  .lives-container .heart-icon {
+    font-size: 1.1em;
+    margin-right: 4px;
+  }
+
+  .header-title h1 {
+    font-size: 1.5em;
+  }
+
+  .header-right .sun-image {
+    width: 80px;
+    height: 80px;
+  }
+
+  .world-button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-header {
+    padding: 8px 16px;
+  }
+
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .stat-container {
+    gap: 8px;
+  }
+
+  .stat-label,
+  .stat-value {
+    font-size: 0.9em;
+  }
+
+  .lives-container .heart-icon {
+    font-size: 1em;
+    margin-right: 3px;
+  }
+
+  .header-title h1 {
+    font-size: 1.3em;
+  }
+
+  .header-right .sun-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .world-button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
