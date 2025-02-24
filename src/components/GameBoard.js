@@ -9,10 +9,14 @@ import { questions } from '../data/questions';
 const GameBoard = ({
   setScore,
   setLives,
+  setCollectedCharacters,
   setCoins,
   score,
   lives,
+  collectedCharacters,
   coins,
+  gameMode,
+  resetGame,
 }) => {
   const gameBoardRef = useRef(null);
   const [leftPosition, setLeftPosition] = useState(50);
@@ -23,40 +27,61 @@ const GameBoard = ({
   const [answeredBlocks, setAnsweredBlocks] = useState(new Set());
   const [cameraX, setCameraX] = useState(0);
 
-  const forwardSpeed = 2; // pixels per interval
+  const [targetString, setTargetString] = useState('');
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+
+  const forwardSpeed = 200; // Pixels per second for forward movement
+  const backwardSpeed = 200; // Pixels per second for backward movement
   const jumpHeight = 150;
   const jumpDuration = 600;
   const blockWidth = 100;
-  const ducklingWidth = 50; // Adjust based on Duckling component's actual width
-  const ducklingHeight = 50; // Adjust based on Duckling component's actual height
-  const threshold = 10; // pixels
+  const ducklingWidth = 50;
+  const ducklingHeight = 50;
+  const threshold = 10;
 
-  // Helper function to generate blocks ensuring no two reds in a row
+  const dsaWords = [
+    'ARRAY', 'STACK', 'QUEUE', 'TREE', 'GRAPH', 'HEAP', 'HASHMAP', 'LINKEDLIST', 'BINARY',
+    'SORTING', 'SEARCH', 'DYNAMIC', 'RECURSION', 'TRIE', 'SEGMENT', 'BIT', 'AVL', 'REDBLACK',
+    'BACKTRACKING', 'GREEDY', 'FLOW', 'KMP', 'BFS', 'DFS', 'PRIORITY', 'BITMAP', 'QUEUE',
+    'CYCLE', 'PATH', 'MST', 'DISJOINT', 'STACKS',
+  ];
+
   const generateBlock = (lastBlockType) => {
     if (lastBlockType === 'red') {
       return {
         type: 'blue',
-        x: 0, // Placeholder, set x when adding to blocks
+        x: 0,
         width: blockWidth,
         height: 50,
       };
     } else {
       return {
         type: Math.random() < 0.3 ? 'red' : 'blue',
-        x: 0, // Placeholder, set x when adding to blocks
+        x: 0,
         width: blockWidth,
         height: 50,
       };
     }
   };
 
-  // 1. Initial Block Generation
+  const selectRandomTarget = () => {
+    const randomIndex = Math.floor(Math.random() * dsaWords.length);
+    return dsaWords[randomIndex];
+  };
+
+  useEffect(() => {
+    if (gameMode === 'world2') {
+      const initialTarget = selectRandomTarget();
+      setTargetString(initialTarget);
+      setCurrentCharIndex(0);
+      setCollectedCharacters('');
+    }
+  }, [gameMode]);
+
   const [blocks, setBlocks] = useState(() => {
     const initialBlocks = [];
-
     for (let i = 0; i < 15; i++) {
       if (i === 0) {
-        // First block is always blue
         initialBlocks.push({
           type: 'blue',
           x: i * blockWidth,
@@ -64,84 +89,154 @@ const GameBoard = ({
           height: 50,
         });
       } else {
-        // Use helper function to ensure no two reds in a row
         const lastBlockType = initialBlocks[i - 1].type;
         const newBlock = generateBlock(lastBlockType);
         newBlock.x = i * blockWidth;
         initialBlocks.push(newBlock);
       }
     }
-
     return initialBlocks;
   });
 
-  // 2. Handle Key Press for Jumping
+  const [isMovingForward, setIsMovingForward] = useState(false);
+  const [isMovingBackward, setIsMovingBackward] = useState(false);
+  const lastTimeRef = useRef(null);
+
+  // Handle Key Press for Movement
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' && !isJumping && !isPaused) {
         jump();
+      } else if (e.code === 'ArrowRight' && !isPaused) {
+        setIsMovingForward(true);
+      } else if (e.code === 'ArrowLeft' && !isPaused) {
+        setIsMovingBackward(true);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === 'ArrowRight') {
+        setIsMovingForward(false);
+      } else if (e.code === 'ArrowLeft') {
+        setIsMovingBackward(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [isJumping, isPaused]);
 
-  // 3. Game Loop Effect
+  // Game Loop using requestAnimationFrame
   useEffect(() => {
-    if (!isPaused) {
-      const gameLoop = setInterval(() => {
-        setLeftPosition((prevLeft) => {
-          const potentialNewPos = prevLeft + forwardSpeed;
-          const gameWidth = gameBoardRef.current.clientWidth;
+    let animationFrameId;
 
-          // Update cameraX if the duck reaches the center
-          if (potentialNewPos - cameraX >= gameWidth / 2) {
-            setCameraX(potentialNewPos - gameWidth / 2);
+    const gameLoop = (time) => {
+      if (lastTimeRef.current === null) {
+        lastTimeRef.current = time;
+      }
 
-            // Dynamically add new blocks if nearing the end
-            const lastBlock = blocks[blocks.length - 1];
-            if (lastBlock.x - cameraX < gameWidth + blockWidth) {
-              setBlocks((prevBlocks) => {
-                const lastBlockType = prevBlocks[prevBlocks.length - 1]?.type || 'blue';
-                const newBlock = generateBlock(lastBlockType);
-                newBlock.x = prevBlocks[prevBlocks.length - 1].x + blockWidth;
-                return [...prevBlocks, newBlock];
-              });
-            }
-          }
+      const deltaTime = (time - lastTimeRef.current) / 1000; // Convert to seconds
+      lastTimeRef.current = time;
 
-          const duckLeft = potentialNewPos;
-          const duckRight = duckLeft + ducklingWidth;
+      if (!isPaused) {
+        if (isMovingForward) {
+          moveForward(deltaTime);
+        } else if (isMovingBackward) {
+          moveBackward(deltaTime);
+        }
+      }
 
-          // Iterate through all blocks to check for collision
-          for (let i = 0; i < blocks.length; i++) {
-            const block = blocks[i];
-            const blockLeft = block.x;
-            const blockRight = block.x + block.width;
+      animationFrameId = requestAnimationFrame(gameLoop);
+    };
 
-            // Check if duckling is centrally on the red block
-            const isOnRedBlock =
-              duckLeft >= blockLeft + threshold &&
-              duckRight <= blockRight - threshold &&
-              block.type === 'red' &&
-              !answeredBlocks.has(i);
+    animationFrameId = requestAnimationFrame(gameLoop);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isPaused, isMovingForward, isMovingBackward]);
 
-            if (isOnRedBlock) {
-              triggerMCQ(i);
-              return prevLeft; // Prevent moving into the red block
-            }
-          }
+  const moveForward = (deltaTime) => {
+    setLeftPosition((prevLeft) => {
+      const potentialNewPos = prevLeft + forwardSpeed * deltaTime;
+      const gameWidth = gameBoardRef.current.clientWidth;
 
-          // Ensure the duck doesn't move beyond the current blocks
-          const maxLeft = blocks[blocks.length - 1].x + blockWidth - ducklingWidth;
-          return Math.min(potentialNewPos, maxLeft);
-        });
-      }, 20);
+      // Update cameraX if the duck reaches the center
+      if (potentialNewPos - cameraX >= gameWidth / 2) {
+        setCameraX(potentialNewPos - gameWidth / 2);
 
-      return () => clearInterval(gameLoop);
-    }
-  }, [isPaused, blocks, answeredBlocks, ducklingWidth, cameraX]);
+        // Dynamically add new blocks if nearing the end
+        const lastBlock = blocks[blocks.length - 1];
+        if (lastBlock.x - cameraX < gameWidth + blockWidth) {
+          setBlocks((prevBlocks) => {
+            const lastBlockType = prevBlocks[prevBlocks.length - 1]?.type || 'blue';
+            const newBlock = generateBlock(lastBlockType);
+            newBlock.x = prevBlocks[prevBlocks.length - 1].x + blockWidth;
+            return [...prevBlocks, newBlock];
+          });
+        }
+      }
+
+      const duckLeft = potentialNewPos;
+      const duckRight = duckLeft + ducklingWidth;
+
+      // Check for collision with red blocks
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blockLeft = block.x;
+        const blockRight = block.x + block.width;
+
+        const isOnRedBlock =
+          duckLeft >= blockLeft + threshold &&
+          duckRight <= blockRight - threshold &&
+          block.type === 'red' &&
+          !answeredBlocks.has(i);
+
+        if (isOnRedBlock) {
+          triggerMCQ(i);
+          return prevLeft; // Prevent moving into the red block
+        }
+      }
+
+      // Ensure the duck doesn't move beyond the current blocks
+      const maxLeft = blocks[blocks.length - 1].x + blockWidth - ducklingWidth;
+      return Math.min(potentialNewPos, maxLeft);
+    });
+  };
+
+  const moveBackward = (deltaTime) => {
+    setLeftPosition((prevLeft) => {
+      const potentialNewPos = prevLeft - backwardSpeed * deltaTime;
+
+      // Prevent moving backward beyond the starting point
+      if (potentialNewPos < 50) {
+        return 50;
+      }
+
+      const duckLeft = potentialNewPos;
+      const duckRight = duckLeft + ducklingWidth;
+
+      // Check for collision with red blocks
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blockLeft = block.x;
+        const blockRight = block.x + block.width;
+
+        const isOnRedBlock =
+          duckLeft >= blockLeft + threshold &&
+          duckRight <= blockRight - threshold &&
+          block.type === 'red' &&
+          answeredBlocks.has(i); // Only check passed red blocks
+
+        if (isOnRedBlock) {
+          return prevLeft; // Prevent moving backward through passed red blocks
+        }
+      }
+
+      return potentialNewPos;
+    });
+  };
 
   const jump = () => {
     if (!isJumping) {
@@ -157,68 +252,44 @@ const GameBoard = ({
     setAnsweredBlocks((prev) => new Set(prev).add(blockIndex));
   };
 
-  // 4. Reset Game Function
-  const resetGame = () => {
-    setLeftPosition(50);
-    setAnsweredBlocks(new Set());
-    setCameraX(0);
-    setIsPaused(false);
-    setIsJumping(false);
-    setBlocks(() => {
-      const initialBlocks = [];
-
-      for (let i = 0; i < 15; i++) {
-        if (i === 0) {
-          // First block is always blue
-          initialBlocks.push({
-            type: 'blue',
-            x: i * blockWidth,
-            width: blockWidth,
-            height: 50,
-          });
-        } else {
-          // Use helper function to ensure no two reds in a row
-          const lastBlockType = initialBlocks[i - 1].type;
-          const newBlock = generateBlock(lastBlockType);
-          newBlock.x = i * blockWidth;
-          initialBlocks.push(newBlock);
-        }
-      }
-
-      return initialBlocks;
-    });
-    setLives(3); // Reset lives to initial value
-    setScore(0);
-    setCoins(0);
-  };
-
-  // 5. Handle Answer Function
   const handleAnswer = (isCorrect) => {
     if (isCorrect) {
-      setCoins((prevCoins) => prevCoins + 1);
+      if (gameMode === 'world1') {
+        setCoins((prevCoins) => prevCoins + 1);
+      } else if (gameMode === 'world2') {
+        const nextChar = targetString[currentCharIndex];
+        setCollectedCharacters((prev) => prev + nextChar);
+        setCurrentCharIndex((prevIndex) => prevIndex + 1);
+
+        if (collectedCharacters.length + 1 === targetString.length) {
+          setTimeout(() => {
+            alert('Level Completed!');
+            resetGame();
+          }, 100);
+        }
+      }
       setScore((prevScore) => prevScore + 10);
     } else {
-      // Deduct a life
       setLives((prevLives) => {
         const newLives = prevLives - 1;
         if (newLives <= 0) {
           alert('Game Over!');
-          resetGame(); // Reset the game entirely
-          return 3; // Reset lives to initial value after game over
+          resetGame();
+          return 3;
         }
         return newLives;
       });
 
-      // Reset the duckling's position to the beginning
       setLeftPosition(50);
       setCameraX(0);
-
-      // Optionally, reset answered blocks to allow revisiting questions
+      if (gameMode === 'world2') {
+        setCollectedCharacters('');
+      }
       setAnsweredBlocks(new Set());
     }
 
-    setIsPaused(false); // Resume the game
-    setShowMCQ(false); // Hide the MCQ modal
+    setIsPaused(false);
+    setShowMCQ(false);
   };
 
   return (
@@ -229,7 +300,7 @@ const GameBoard = ({
             key={index}
             className={`block ${block.type}`}
             style={{
-              left: `${block.x - cameraX}px`, // Adjust position based on cameraX
+              left: `${block.x - cameraX}px`,
               width: `${block.width}px`,
               height: `${block.height}px`,
             }}
@@ -239,9 +310,9 @@ const GameBoard = ({
       <Duckling
         className={isJumping ? 'jumping' : ''}
         style={{
-          left: `${leftPosition - cameraX}px`, // Adjust position based on cameraX
+          left: `${leftPosition - cameraX}px`,
           transform: isJumping ? `translateY(-${jumpHeight}px)` : 'translateY(0)',
-          transition: `transform ${jumpDuration}ms`,
+          transition: `transform ${jumpDuration}ms, left 100ms linear`,
         }}
       />
       {showMCQ && currentQuestion && (
